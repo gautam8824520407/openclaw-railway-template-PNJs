@@ -39,6 +39,12 @@ ENV HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew/Homebrew"
 
 ENV PORT=8080
 ENV OPENCLAW_ENTRY=/usr/local/lib/node_modules/openclaw/dist/entry.js
+
+# These are injected at runtime via Railway Variables (not baked into the image).
+# Declaring them here makes them visible to entrypoint.sh and init-config.sh.
+ENV TELEGRAM_BOT_TOKEN=""
+ENV OPENROUTER_API_KEY=""
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
