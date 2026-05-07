@@ -6,12 +6,20 @@
 
 <img width="1860" height="2624" alt="CleanShot 2026-02-23 at 21 59 06@2x" src="https://github.com/user-attachments/assets/2605d44c-4319-4e92-838c-3caa726b9595" />
 
+## Requirements
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | **Yes** | Google Gemini API key — used by the `gemini-2.0-flash` model. Get one at [aistudio.google.com](https://aistudio.google.com/apikey). |
+| `SETUP_PASSWORD` | **Yes** | Password for the `/setup` wizard. |
+
 ## What you get
 
 - **OpenClaw Gateway + Control UI** (served at `/` and `/openclaw`)
 - A friendly **Setup Wizard** at `/setup` (protected by a password)
 - Optional **Web Terminal** at `/tui` for browser-based TUI access
-- Persistent state via **Railway Volume** (so config/credentials/memory survive redeploys)
+- Persistent state via **Railway Volume** (so credentials/memory survive redeploys)
+- Always runs **`gemini-2.0-flash`** — the model config is reset on every startup
 
 ## How it works (high level)
 
@@ -81,6 +89,7 @@ docker build -t openclaw-railway-template .
 docker run --rm -p 8080:8080 \
   -e PORT=8080 \
   -e SETUP_PASSWORD=test \
+  -e GEMINI_API_KEY=your-gemini-api-key \
   -e ENABLE_WEB_TUI=true \
   -e OPENCLAW_STATE_DIR=/data/.openclaw \
   -e OPENCLAW_WORKSPACE_DIR=/data/workspace \
@@ -113,15 +122,9 @@ A: Go to `/setup` and use the "Approve Pairing" dialog to approve pending pairin
 
 A: New browsers/devices need a one-time approval from the gateway. Go to `/setup`, click "Manage Devices" in the Devices section, and click "Approve Latest Request". Refresh the Control UI and it should connect. Local connections (127.0.0.1) are auto-approved; remote connections (LAN, public URL) require explicit approval.
 
-**Q: How do I change the AI model after setup?**
+**Q: Which AI model does this template use?**
 
-A: Use the OpenClaw CLI to switch models. Access the web terminal at `/tui` (if enabled) or SSH into your container and run:
-
-```bash
-openclaw models set provider/model-id
-```
-
-For example: `openclaw models set anthropic/claude-sonnet-4-20250514` or `openclaw models set openai/gpt-4-turbo`. Use `openclaw models list --all` to see available models.
+A: This template is pinned to **`gemini-2.0-flash`** (Google Gemini). The model config is reset to `gemini-2.0-flash` on every container startup, so you must set `GEMINI_API_KEY` in your Railway Variables for the bot to work. Get a key at [aistudio.google.com](https://aistudio.google.com/apikey).
 
 **Q: How do I access configuration after the initial setup?**
 
