@@ -10,7 +10,8 @@
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | **Yes** | Google Gemini API key — used by the `gemini-2.0-flash` model. Get one at [aistudio.google.com](https://aistudio.google.com/apikey). |
+| `TELEGRAM_BOT_TOKEN` | **Yes** | Telegram bot token from [@BotFather](https://t.me/BotFather). Injected automatically into the config on every startup. |
+| `OPENROUTER_API_KEY` | **Yes** | OpenRouter API key — used by the `openrouter/meta-llama/llama-3.3-70b-instruct:free` model. Get one at [openrouter.ai/keys](https://openrouter.ai/keys). |
 | `SETUP_PASSWORD` | **Yes** | Password for the `/setup` wizard. |
 
 ## What you get
@@ -19,7 +20,7 @@
 - A friendly **Setup Wizard** at `/setup` (protected by a password)
 - Optional **Web Terminal** at `/tui` for browser-based TUI access
 - Persistent state via **Railway Volume** (so credentials/memory survive redeploys)
-- Always runs **`gemini-2.0-flash`** — the model config is reset on every startup
+- Always runs **`openrouter/meta-llama/llama-3.3-70b-instruct:free`** — model, API key, and Telegram token are injected from env vars on every startup, no manual config needed
 
 ## How it works (high level)
 
@@ -41,7 +42,7 @@ This uses OpenClaw's `openai-codex-device-code` onboarding flow, so you do not n
 1. Open Telegram and message **@BotFather**
 2. Run `/newbot` and follow the prompts
 3. BotFather will give you a token that looks like: `123456789:AA...`
-4. Paste that token into `/setup`
+4. Set it as the `TELEGRAM_BOT_TOKEN` Railway Variable — it is injected automatically on every startup, no manual setup step needed
 
 ### Discord bot token
 
@@ -89,7 +90,8 @@ docker build -t openclaw-railway-template .
 docker run --rm -p 8080:8080 \
   -e PORT=8080 \
   -e SETUP_PASSWORD=test \
-  -e GEMINI_API_KEY=your-gemini-api-key \
+  -e TELEGRAM_BOT_TOKEN=your-telegram-bot-token \
+  -e OPENROUTER_API_KEY=your-openrouter-api-key \
   -e ENABLE_WEB_TUI=true \
   -e OPENCLAW_STATE_DIR=/data/.openclaw \
   -e OPENCLAW_WORKSPACE_DIR=/data/workspace \
@@ -98,6 +100,7 @@ docker run --rm -p 8080:8080 \
 
 # Setup wizard: http://localhost:8080/setup (password: test)
 # Web terminal: http://localhost:8080/tui (after setup)
+# Telegram bot and OpenRouter model are configured automatically — no manual steps needed.
 ```
 
 ## FAQ
@@ -124,7 +127,7 @@ A: New browsers/devices need a one-time approval from the gateway. Go to `/setup
 
 **Q: Which AI model does this template use?**
 
-A: This template is pinned to **`gemini-2.0-flash`** (Google Gemini). The model config is reset to `gemini-2.0-flash` on every container startup, so you must set `GEMINI_API_KEY` in your Railway Variables for the bot to work. Get a key at [aistudio.google.com](https://aistudio.google.com/apikey).
+A: This template is pinned to **`openrouter/meta-llama/llama-3.3-70b-instruct:free`** (Meta Llama 3.3 70B via OpenRouter). The model and your `OPENROUTER_API_KEY` are injected automatically from environment variables on every container startup — no manual configuration needed. Get a free API key at [openrouter.ai/keys](https://openrouter.ai/keys).
 
 **Q: How do I access configuration after the initial setup?**
 

@@ -1,58 +1,68 @@
 #!/bin/bash
-# Ensures openclaw.json always uses gemini-2.0-flash (Google Gemini) on startup.
+# Ensures openclaw.json always uses openrouter/meta-llama/llama-3.3-70b-instruct:free
+# on every startup, with Telegram and OpenRouter configured from environment variables.
 # Runs as root before gosu-dropping to the openclaw user, so /data is writable.
-# Requires GEMINI_API_KEY environment variable to be set.
+# Requires TELEGRAM_BOT_TOKEN and OPENROUTER_API_KEY environment variables to be set.
 
 set -e
 
-TARGET_MODEL="gemini-2.0-flash"
+TARGET_MODEL="openrouter/meta-llama/llama-3.3-70b-instruct:free"
 CONFIG_DIR="/data/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 
-if [ -z "${GEMINI_API_KEY}" ]; then
-  echo "[init-config] WARNING: GEMINI_API_KEY is not set. The Gemini model will not work without it."
+if [ -z "${TELEGRAM_BOT_TOKEN}" ]; then
+  echo "[init-config] WARNING: TELEGRAM_BOT_TOKEN is not set. The Telegram bot will not work without it."
 fi
 
-if [ -f "${CONFIG_FILE}" ]; then
-  echo "[init-config] Patching model fields in ${CONFIG_FILE}"
+if [ -z "${OPENROUTER_API_KEY}" ]; then
+  echo "[init-config] WARNING: OPENROUTER_API_KEY is not set. The OpenRouter model will not work without it."
+fi
 
-  # Use node (always available in the image) to do a safe JSON in-place update.
-  node - "${CONFIG_FILE}" "${TARGET_MODEL}" "${GEMINI_API_KEY:-}" <<'EOF'
-const fs    = require("fs");
-const file  = process.argv[2];
-const model = process.argv[3];
-const apiKey = process.argv[4];
+mkdir -p "${CONFIG_DIR}"
 
-let cfg;
-try {
-  cfg = JSON.parse(fs.readFileSync(file, "utf8"));
-} catch (err) {
-  console.error("[init-config] Failed to parse", file, "-", err.message);
-  process.exit(1);
+# Always write a complete, fresh config so every startup is fully automated.
+# The volume persists other state (memory, workspace, etc.) but the config is
+# regenerated on every boot to pick up the correct model, API key, and bot token.
+node - "${CONFIG_FILE}" "${TARGET_MODEL}" "${OPENROUTER_API_KEY:-}" "${TELEGRAM_BOT_TOKEN:-}" <<'EOF'
+const fs           = require("fs");
+const file         = process.argv[2];
+const model        = process.argv[3];
+const openrouterKey = process.argv[4];
+const telegramToken = process.argv[5];
+
+// Start from existing config if present so we preserve any extra state
+// (e.g. device tokens, workspace settings) that openclaw wrote itself.
+let cfg = {};
+if (fs.existsSync(file)) {
+  try {
+    cfg = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (err) {
+    console.warn("[init-config] Could not parse existing config, starting fresh:", err.message);
+    cfg = {};
+  }
 }
 
+// Always override model fields.
 cfg.model = model;
-if (cfg.agent && typeof cfg.agent === "object") {
-  cfg.agent.model = model;
+if (!cfg.agent || typeof cfg.agent !== "object") cfg.agent = {};
+cfg.agent.model = model;
+
+// Always inject OpenRouter API key.
+if (openrouterKey) {
+  cfg.openrouterApiKey = openrouterKey;
 }
-if (apiKey) {
-  cfg.geminiApiKey = apiKey;
+
+// Always configure the Telegram provider.
+if (telegramToken) {
+  if (!cfg.providers || typeof cfg.providers !== "object") cfg.providers = {};
+  if (!cfg.providers.telegram || typeof cfg.providers.telegram !== "object") {
+    cfg.providers.telegram = {};
+  }
+  cfg.providers.telegram.botToken = telegramToken;
+  cfg.providers.telegram.enabled  = true;
+  console.log("[init-config] Telegram provider configured.");
 }
 
 fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n", "utf8");
-console.log("[init-config] model set to", model);
+console.log("[init-config] Config written to", file, "— model:", model);
 EOF
-
-else
-  echo "[init-config] ${CONFIG_FILE} not found — creating minimal config with correct model"
-  mkdir -p "${CONFIG_DIR}"
-  node -e "
-const model  = process.argv[1];
-const file   = process.argv[2];
-const apiKey = process.argv[3];
-const cfg = { model, agent: { model } };
-if (apiKey) cfg.geminiApiKey = apiKey;
-require('fs').writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n', 'utf8');
-console.log('[init-config] created', file, 'with model', model);
-" "${TARGET_MODEL}" "${CONFIG_FILE}" "${GEMINI_API_KEY:-}"
-fi
