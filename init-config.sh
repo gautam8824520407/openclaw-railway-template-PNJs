@@ -6,7 +6,7 @@
 
 set -e
 
-TARGET_MODEL="openrouter/meta-llama/llama-3.3-70b-instruct:free"
+TARGET_MODEL= "google/gemma-3-4b-it:free"
 CONFIG_DIR="/data/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 
