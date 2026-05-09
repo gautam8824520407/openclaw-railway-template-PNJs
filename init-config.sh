@@ -52,16 +52,18 @@ if (openrouterKey) {
   cfg.openrouterApiKey = openrouterKey;
 }
 
-// Always configure the Telegram provider.
+// Always configure the Telegram channel.
 if (telegramToken) {
-  if (!cfg.providers || typeof cfg.providers !== "object") cfg.providers = {};
-  if (!cfg.providers.telegram || typeof cfg.providers.telegram !== "object") {
-    cfg.providers.telegram = {};
-  }
-  cfg.providers.telegram.botToken = telegramToken;
-  cfg.providers.telegram.enabled  = true;
-  console.log("[init-config] Telegram provider configured.");
+  if (!cfg.channels || typeof cfg.channels !== "object") cfg.channels = {};
+  if (!cfg.channels.telegram || typeof cfg.channels.telegram !== "object") cfg.channels.telegram = {};
+  if (!cfg.channels.telegram.accounts || typeof cfg.channels.telegram.accounts !== "object") cfg.channels.telegram.accounts = {};
+  if (!cfg.channels.telegram.accounts.default || typeof cfg.channels.telegram.accounts.default !== "object") cfg.channels.telegram.accounts.default = {};
+  cfg.channels.telegram.accounts.default.token = telegramToken;
+  cfg.channels.telegram.accounts.default.dmPolicy = "open";
+  cfg.channels.telegram.accounts.default.allowFrom = ["*"];
+  console.log("[init-config] Telegram channel configured.");
 }
+
 
 fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n", "utf8");
 console.log("[init-config] Config written to", file, "— model:", model);
